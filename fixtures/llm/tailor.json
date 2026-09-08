@@ -1,0 +1,35 @@
+Claro, acá va el resultado:
+
+```json
+{
+  "entries": [
+    {
+      "id": "exp0",
+      "keep": true,
+      "bullets": [
+        "Diseñé la API de pagos que procesa 12.000 transacciones diarias en producción",
+        "Optimicé el checkout reduciendo la latencia de 800 ms a 210 ms con caché en Redis",
+        "Lideré la migración de PHP 5 a Python 3.12 sin downtime, mejorando el throughput un 45%",
+        "Mentoreé a 4 desarrolladores junior en prácticas de código y despliegue"
+      ]
+    },
+    {
+      "id": "exp1",
+      "keep": true,
+      "bullets": [
+        "Construí el módulo de conciliación bancaria del core transaccional",
+        "Integré 3 pasarelas de pago regionales"
+      ]
+    },
+    { "id": "edu0", "keep": true, "bullets": [] },
+    { "id": "xtr0", "keep": true, "bullets": [] }
+  ],
+  "skills": ["Python", "Django", "PostgreSQL", "AWS", "Redis", "Docker", "Inglés C1"],
+  "matched_keywords": ["Python", "Django", "APIs REST", "PostgreSQL", "AWS"],
+  "missing_requirements": ["Kubernetes", "Experiencia en equipos de más de 20 personas"],
+  "summary": "Ingeniera backend con 6 años construyendo sistemas de pagos de alta disponibilidad.",
+  "headline": "Backend Engineer | Python & Django | Sistemas de pagos a escala",
+  "about": "Construyo backends de pagos que aguantan volumen real. En los últimos años diseñé APIs transaccionales, optimicé latencias de checkout y lideré migraciones sin downtime.",
+  "recruiter_message": "Hola, vi la búsqueda de Senior Backend Engineer. Vengo de diseñar la API de pagos de Acme, que procesa 12.000 transacciones diarias con Python y Django. Me interesa mucho el desafío. ¿Charlamos?"
+}
+```

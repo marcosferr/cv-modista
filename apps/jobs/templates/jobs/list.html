@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Mis CVs · cv-modista{% endblock %}
+{% block content %}
+<h1>Mis CVs</h1>
+<p class="lede">Cupo del día: {{ quota.remaining }}/{{ quota.limit }} llamadas · tus CVs en 24 h: {{ user_used }}/{{ user_limit }}</p>
+<div class="panel">
+  {% for job in jobs %}
+    <div class="jobrow">
+      <span class="pill {% if job.status == 'DONE' %}ok{% elif job.status == 'FAILED' or job.status == 'QUOTA_EXHAUSTED' %}err{% else %}run{% endif %}">{{ job.get_status_display }}</span>
+      <a href="{% url 'job_detail' job.pk %}">{{ job.target_role }}</a>
+      {% if job.flagged_numbers %}<span class="pill err">{{ job.flagged_numbers|length }} cifra{{ job.flagged_numbers|length|pluralize }} a revisar</span>{% endif %}
+      <span class="when">{{ job.created_at|date:"d/m/Y H:i" }}</span>
+    </div>
+  {% empty %}
+    <p class="dim">Todavía no generaste ninguno. <a href="{% url 'job_create' %}">Empezá acá</a>.</p>
+  {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,53 @@
+{
+  "contact": {
+    "full_name": "Ana Gómez Ríos",
+    "email": "ana.gomez@example.com",
+    "phone": "+595 981 123456",
+    "location": "Asunción, Paraguay",
+    "linkedin": "linkedin.com/in/anagomezrios"
+  },
+  "education": [
+    {
+      "institution": "Universidad Nacional de Asunción",
+      "degree": "Ingeniería Informática",
+      "location": "San Lorenzo, Paraguay",
+      "dates": "2014 - 2019",
+      "details": ["Promedio 4,2/5", "Tesis sobre sistemas distribuidos de pagos"]
+    }
+  ],
+  "experience": [
+    {
+      "organization": "Acme & Co. S.A.",
+      "title": "Desarrolladora Backend Senior",
+      "location": "Asunción, Paraguay",
+      "dates": "Ene 2021 - Presente",
+      "bullets": [
+        "Diseñé la API de pagos que procesa 12.000 transacciones diarias",
+        "Reduje la latencia del checkout de 800 ms a 210 ms usando caché en Redis",
+        "Lideré la migración de PHP 5 a Python 3.12 sin downtime",
+        "Definí el pipeline de CI/CD con GitHub Actions",
+        "Mentoreé a 4 desarrolladores junior del equipo"
+      ]
+    },
+    {
+      "organization": "Fintech S.R.L.",
+      "title": "Desarrolladora Backend",
+      "location": "Remoto",
+      "dates": "Mar 2019 - Dic 2020",
+      "bullets": [
+        "Construí el módulo de conciliación bancaria",
+        "Automaticé reportes que ahorraban 20 h/mes al equipo de finanzas",
+        "Integré 3 pasarelas de pago regionales"
+      ]
+    }
+  ],
+  "extras": [
+    {
+      "title": "Mentora",
+      "organization": "PyLadies Paraguay",
+      "dates": "2022 - 2023",
+      "details": ["Mentoreé a 15 desarrolladoras en su primer empleo tech"]
+    }
+  ],
+  "skills": ["Python", "Django", "PostgreSQL", "Redis", "Docker", "AWS", "Inglés C1"]
+}

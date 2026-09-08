@@ -1,0 +1,35 @@
+{% load static %}<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}cv-modista{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'app.css' %}">
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="{% url 'job_create' %}">cv<span>-modista</span></a>
+    <nav>
+      {% if user.is_authenticated %}
+        <a href="{% url 'job_create' %}">Nuevo CV</a>
+        <a href="{% url 'job_list' %}">Mis CVs</a>
+        <form method="post" action="{% url 'logout' %}" style="display:inline">
+          {% csrf_token %}<button class="btn ghost" style="padding:5px 12px">Salir</button>
+        </form>
+      {% else %}
+        <a href="{% url 'login' %}">Entrar</a>
+        <a href="{% url 'signup' %}">Crear cuenta</a>
+      {% endif %}
+    </nav>
+  </div>
+</header>
+<main class="wrap">
+  {% for message in messages %}
+    <div class="note {% if message.tags == 'error' %}err{% elif message.tags == 'success' %}ok{% else %}warn{% endif %}">{{ message }}</div>
+  {% endfor %}
+  {% block content %}{% endblock %}
+</main>
+{% block scripts %}{% endblock %}
+</body>
+</html>

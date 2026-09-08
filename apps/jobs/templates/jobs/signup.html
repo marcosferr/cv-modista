@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Crear cuenta · cv-modista{% endblock %}
+{% block content %}
+<h1>Crear cuenta</h1>
+<p class="lede">Tus CVs quedan asociados a tu cuenta y solo vos los ves.</p>
+<form method="post" class="panel" style="max-width:460px">
+  {% csrf_token %}
+  {% for field in form %}
+    <div class="field">
+      <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+      {{ field }}
+      {% if field.help_text %}<p class="help">{{ field.help_text|safe }}</p>{% endif %}
+      {{ field.errors }}
+    </div>
+  {% endfor %}
+  <button>Crear cuenta</button>
+  <p class="help" style="margin-top:14px">¿Ya tenés? <a href="{% url 'login' %}">Entrá</a>.</p>
+</form>
+{% endblock %}

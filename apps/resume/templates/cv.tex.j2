@@ -1,0 +1,112 @@
+%% CV en formato Harvard, generado por cv-modista.
+%% Compila sin cambios con pdflatex, xelatex y lualatex. Probado para Overleaf.
+%% Una columna, sin foto, sin iconos: legible por cualquier ATS.
+\documentclass[11pt,letterpaper]{article}
+
+\usepackage{iftex}
+\ifPDFTeX
+  %% cmap agrega los ToUnicode CMap que necesitan las fuentes T1 de pdflatex.
+  %% Sin esto un ATS lee "Formaci n Acad mica" y el CV pierde keywords.
+  \usepackage{cmap}
+  \usepackage[utf8]{inputenc}
+\fi
+
+%% fontenc va FUERA del guard a proposito. Bajo XeTeX y LuaTeX la codificacion por
+%% defecto es TU, y con TU activa tgtermes no toma efecto y \bfseries no encuentra
+%% la variante negrita: el documento sale entero en Latin Modern regular. Forzar T1
+%% en los tres motores es lo que hace que el mismo .tex se vea igual en Tectonic,
+%% en Overleaf y en un pdflatex local.
+\usepackage[T1]{fontenc}
+
+%% TeX Gyre Termes: clon libre de Times New Roman, el tipo que espera el formato
+%% Harvard. Viene en texlive-fonts-recommended, o sea en Overleaf, MiKTeX y TeX Live.
+%% Funciona igual en los tres motores, a diferencia de fontspec.
+\usepackage{tgtermes}
+
+\usepackage[letterpaper,margin=0.75in]{geometry}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{microtype}
+\usepackage[hidelinks]{hyperref}
+
+\pagestyle{empty}
+\raggedbottom
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0pt}
+
+\titleformat{\section}{\large\bfseries\scshape}{}{0em}{}[\vspace{-0.65em}\rule{\textwidth}{0.4pt}]
+\titlespacing*{\section}{0pt}{0.85em}{0.45em}
+
+\setlist[itemize]{leftmargin=1.1em,itemsep=0.12em,topsep=0.15em,parsep=0pt,label=\textbullet}
+
+%% Encabezado de entrada: organizacion y lugar arriba, cargo y fechas abajo.
+\newcommand{\cventry}[4]{%
+  \textbf{#1}\hfill #2\par
+  \textit{#3}\hfill #4\par
+  \vspace{0.12em}%
+}
+
+\begin{document}
+
+\begin{center}
+  {\LARGE\bfseries \VAR{ contact.full_name | tex }}\par
+  \vspace{0.35em}
+  {\small \BLOCK{ for part in contact_parts }\BLOCK{ if part.href }\href{\VAR{ part.href | url }}{\VAR{ part.text | tex }}\BLOCK{ else }\VAR{ part.text | tex }\BLOCK{ endif }\BLOCK{ if not loop.last } $\cdot$ \BLOCK{ endif }\BLOCK{ endfor }}
+\end{center}
+
+\BLOCK{ if cv.summary }
+\section{\VAR{ titles.summary | tex }}
+\VAR{ cv.summary | tex }
+\BLOCK{ endif }
+
+\BLOCK{ if cv.education }
+\section{\VAR{ titles.education | tex }}
+\BLOCK{ for entry in cv.education }
+\cventry{\VAR{ entry.institution | tex }}{\VAR{ entry.location | tex }}{\VAR{ entry.degree | tex }}{\VAR{ entry.dates | tex }}
+\BLOCK{ if entry.details }
+\begin{itemize}
+\BLOCK{ for detail in entry.details }
+  \item \VAR{ detail | tex }
+\BLOCK{ endfor }
+\end{itemize}
+\BLOCK{ endif }
+\vspace{0.35em}
+\BLOCK{ endfor }
+\BLOCK{ endif }
+
+\BLOCK{ if cv.experience }
+\section{\VAR{ titles.experience | tex }}
+\BLOCK{ for entry in cv.experience }
+\cventry{\VAR{ entry.organization | tex }}{\VAR{ entry.location | tex }}{\VAR{ entry.title | tex }}{\VAR{ entry.dates | tex }}
+\BLOCK{ if entry.bullets }
+\begin{itemize}
+\BLOCK{ for bullet in entry.bullets }
+  \item \VAR{ bullet | tex }
+\BLOCK{ endfor }
+\end{itemize}
+\BLOCK{ endif }
+\vspace{0.35em}
+\BLOCK{ endfor }
+\BLOCK{ endif }
+
+\BLOCK{ if cv.extras }
+\section{\VAR{ titles.extras | tex }}
+\BLOCK{ for entry in cv.extras }
+\cventry{\VAR{ entry.organization | tex }}{}{\VAR{ entry.title | tex }}{\VAR{ entry.dates | tex }}
+\BLOCK{ if entry.details }
+\begin{itemize}
+\BLOCK{ for detail in entry.details }
+  \item \VAR{ detail | tex }
+\BLOCK{ endfor }
+\end{itemize}
+\BLOCK{ endif }
+\vspace{0.35em}
+\BLOCK{ endfor }
+\BLOCK{ endif }
+
+\BLOCK{ if cv.skills }
+\section{\VAR{ titles.skills | tex }}
+\BLOCK{ for skill in cv.skills }\VAR{ skill | tex }\BLOCK{ if not loop.last } $\cdot$ \BLOCK{ endif }\BLOCK{ endfor }
+\BLOCK{ endif }
+
+\end{document}

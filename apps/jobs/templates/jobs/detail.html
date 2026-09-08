@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}{{ job.target_role }} · cv-modista{% endblock %}
+{% block content %}
+<h1>{{ job.target_role }}</h1>
+<p class="lede">
+  <span class="pill {% if job.status == 'DONE' %}ok{% elif job.status == 'FAILED' or job.status == 'QUOTA_EXHAUSTED' %}err{% else %}run{% endif %}" id="pill">{{ job.get_status_display }}</span>
+  <span class="dim">creado {{ job.created_at|date:"d/m/Y H:i" }}</span>
+</p>
+
+<div class="panel">
+  <div class="meter"><i id="bar" style="width: {{ job.progress }}%"></i></div>
+  <div class="kv">
+    <span>CV leído: {{ job.get_extraction_method_display|default:job.extraction_method }}</span>
+    {% if job.models_used %}<span>Modelos: {{ job.models_used|join:", " }}</span>{% endif %}
+    {% if job.pages %}<span>{{ job.pages }} página{{ job.pages|pluralize }}</span>{% endif %}
+    {% if job.trimmed_bullets %}<span>{{ job.trimmed_bullets }} bullet{{ job.trimmed_bullets|pluralize }} recortado{{ job.trimmed_bullets|pluralize }} para entrar en una página</span>{% endif %}
+  </div>
+</div>
+
+{% if job.error %}<div class="note err"><strong>{{ job.get_status_display }}.</strong> {{ job.error }}</div>{% endif %}
+{% if job.status == 'FAILED' or job.status == 'QUOTA_EXHAUSTED' %}
+  <form method="post" action="{% url 'job_retry' job.pk %}" class="panel">
+    {% csrf_token %}
+    <p class="help" style="margin-bottom:10px">Reintenta desde el último paso completado: lo que ya se resolvió no vuelve a gastar cupo.</p>
+    <button>Reintentar</button>
+  </form>
+{% endif %}
+
+{% if job.status == 'DONE' %}
+  <div class="panel">
+    <h2 style="margin-top:0">Descargas</h2>
+    <div class="btns">
+      <a class="btn" href="{% url 'job_download' job.pk 'pdf' %}">PDF renderizado</a>
+      <a class="btn ghost" href="{% url 'job_download' job.pk 'tex' %}">Fuente .tex</a>
+      <a class="btn ghost" href="{% url 'job_download' job.pk 'zip' %}">ZIP para Overleaf</a>
+      <a class="btn ghost" href="{% url 'job_download' job.pk 'json' %}">JSON</a>
+    </div>
+    <p class="help">El .tex compila sin cambios con pdflatex, xelatex y lualatex.</p>
+  </div>
+
+  {% if job.ats_missing %}
+    <div class="note err"><strong>Aviso de ATS.</strong> Estos datos no se pudieron extraer del PDF:
+      {{ job.ats_missing|join:" · " }}</div>
+  {% endif %}
+
+  {% if job.flagged_numbers %}
+    <div class="note warn"><strong>{{ job.flagged_numbers|length }} cifra{{ job.flagged_numbers|length|pluralize }} sin respaldo en tu CV original.</strong>
+      Revisalas antes de enviar: <a href="{% url 'job_review' job.pk %}">ver el diff</a>.</div>
+  {% endif %}
+
+  <div class="panel">
+    <h2 style="margin-top:0">Match con la oferta <span class="pill">{{ job.match_report.score }}%</span></h2>
+    {% if job.match_report.matched %}
+      <p class="help">Requisitos que cubrís</p>
+      <ul class="chips">{% for k in job.match_report.matched %}<li>{{ k }}</li>{% endfor %}</ul>
+    {% endif %}
+    {% if job.match_report.missing %}
+      <p class="help" style="margin-top:14px">Requisitos que no cubrís</p>
+      <ul class="chips miss">{% for k in job.match_report.missing %}<li>{{ k }}</li>{% endfor %}</ul>
+    {% endif %}
+    <p style="margin-top:18px"><a class="btn ghost" href="{% url 'job_review' job.pk %}">Revisar y editar</a></p>
+  </div>
+
+  {% if job.linkedin_pack.headline or job.linkedin_pack.about %}
+  <div class="panel">
+    <h2 style="margin-top:0">Pack de LinkedIn</h2>
+    {% if job.linkedin_pack.headline %}
+      <p class="help">Titular</p><p>{{ job.linkedin_pack.headline }}</p>{% endif %}
+    {% if job.linkedin_pack.about %}
+      <p class="help">Acerca de</p><p>{{ job.linkedin_pack.about }}</p>{% endif %}
+    {% if job.linkedin_pack.recruiter_message %}
+      <p class="help">Mensaje al recruiter</p><p>{{ job.linkedin_pack.recruiter_message }}</p>{% endif %}
+  </div>
+  {% endif %}
+{% endif %}
+
+{% if job.notes %}
+  <p class="help mono">Rotación de modelos: {{ job.notes|join:" · " }}</p>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if not job.is_terminal %}
+<script>
+// Polling simple del endpoint de estado. Sin dependencias: la app tiene que andar
+// aunque el server no tenga salida a internet.
+(function () {
+  const bar = document.getElementById("bar"), pill = document.getElementById("pill");
+  const tick = async () => {
+    try {
+      const s = await fetch("{% url 'job_status' job.pk %}", { cache: "no-store" }).then(r => r.json());
+      bar.style.width = s.progress + "%";
+      pill.textContent = s.label;
+      if (s.terminal) { location.reload(); return; }
+    } catch (e) { /* el worker puede estar reiniciando: se reintenta */ }
+    setTimeout(tick, 2000);
+  };
+  setTimeout(tick, 1500);
+})();
+</script>
+{% endif %}
+{% endblock %}

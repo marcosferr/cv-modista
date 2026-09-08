@@ -1,0 +1,59 @@
+[project]
+name = "cv-modista"
+version = "0.1.0"
+description = "CV en formato Harvard adaptado a una oferta, con pack LinkedIn, cola Celery y OpenRouter free models"
+requires-python = ">=3.12"
+dependencies = [
+    "django>=5.1",
+    "celery[redis]>=5.4",
+    "redis>=5.0",
+    "httpx>=0.27",
+    "pydantic>=2.9",
+    "python-dotenv>=1.0",
+    "jinja2>=3.1",
+    "json-repair>=0.30",
+    "pypdf>=5.0",
+    "python-docx>=1.1",
+    "rapidfuzz>=3.10",
+    "tenacity>=9.0",
+    "boto3>=1.43.90",
+    "django-storages>=1.14.6",
+    "whitenoise>=6.12.0",
+    "gunicorn>=26.2.0",
+]
+
+[project.optional-dependencies]
+# Fallback OCR: solo se usa si pypdf extrae <500 chars (PDF escaneado).
+# Pip puro, sin binarios de sistema y sin torch.
+ocr = [
+    "rapidocr-onnxruntime>=1.3",
+    "pypdfium2>=4.30",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "pytest-django>=4.9",
+    "ruff>=0.7",
+    "honcho>=2",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+# Las migraciones las escribe Django, no nosotros.
+extend-exclude = ["*/migrations/*"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "C4"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings"
+python_files = ["test_*.py"]
+testpaths = ["tests"]
+
+[tool.uv]
+# Proyecto virtual: uv instala las dependencias sin intentar construir el paquete.
+# Django corre desde la raíz del repo, no hace falta un editable install.
+package = false

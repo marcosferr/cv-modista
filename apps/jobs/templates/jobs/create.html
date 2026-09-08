@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block title %}Nuevo CV · cv-modista{% endblock %}
+{% block content %}
+<h1>Adaptá tu CV a una oferta</h1>
+<p class="lede">Formato Harvard, sin foto, una columna, legible por ATS. Descargable en PDF y en LaTeX.</p>
+
+{% if quota.exhausted %}
+  <div class="note err">Cupo diario de OpenRouter agotado ({{ quota.used }}/{{ quota.limit }}). Se libera en {{ quota.reset_hours }} h.</div>
+{% elif user_blocked %}
+  <div class="note err">Llegaste al tope de {{ user_limit }} CVs en 24 h. Probá más tarde.</div>
+{% else %}
+  <div class="note warn">Cupo del día: {{ quota.remaining }}/{{ quota.limit }} llamadas disponibles · tus CVs en 24 h: {{ user_used }}/{{ user_limit }}</div>
+{% endif %}
+
+<form method="post" enctype="multipart/form-data" id="jobform">
+  {% csrf_token %}
+  {% if form.non_field_errors %}<div class="note err">{{ form.non_field_errors.0 }}</div>{% endif %}
+  {{ form.cv_s3_key }}
+
+  <div class="panel">
+    <div class="field">
+      <label for="{{ form.target_role.id_for_label }}">{{ form.target_role.label }}</label>
+      {{ form.target_role }}{{ form.target_role.errors }}
+    </div>
+    <div class="field">
+      <label for="{{ form.job_description.id_for_label }}">{{ form.job_description.label }}</label>
+      {{ form.job_description }}
+      <p class="help">{{ form.job_description.help_text }}</p>{{ form.job_description.errors }}
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="field">
+      <label for="{{ form.cv_source_text.id_for_label }}">{{ form.cv_source_text.label }}</label>
+      {{ form.cv_source_text }}
+      <p class="help">{{ form.cv_source_text.help_text }}</p>{{ form.cv_source_text.errors }}
+    </div>
+    <div class="field">
+      <label for="{{ form.cv_file.id_for_label }}">{{ form.cv_file.label }}</label>
+      {{ form.cv_file }}
+      <p class="help" id="uphint">{{ form.cv_file.help_text }}</p>{{ form.cv_file.errors }}
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="row">
+      <div class="field">
+        <label for="{{ form.language.id_for_label }}">{{ form.language.label }}</label>
+        {{ form.language }}
+      </div>
+      <div class="field check" style="align-self:end;padding-bottom:9px">
+        {{ form.include_summary }}
+        <label for="{{ form.include_summary.id_for_label }}">{{ form.include_summary.label }}
+          <span class="help" style="display:block">{{ form.include_summary.help_text }}</span>
+        </label>
+      </div>
+    </div>
+    <button type="submit" id="go" {% if blocked %}disabled{% endif %}>Generar CV</button>
+  </div>
+</form>
+{% endblock %}
+
+{% block scripts %}{% if s3_enabled %}
+<script>
+// Subida directa a S3 con POST prefirmado: el archivo no pasa por gunicorn, asi que
+// una subida grande no ocupa un worker mientras dura.
+(function () {
+  const input = document.getElementById("{{ form.cv_file.id_for_label }}");
+  const keyField = document.getElementById("{{ form.cv_s3_key.id_for_label }}");
+  const hint = document.getElementById("uphint");
+  const submit = document.getElementById("go");
+  if (!input || !keyField) return;
+
+  input.addEventListener("change", async () => {
+    const file = input.files[0];
+    if (!file) { keyField.value = ""; return; }
+    hint.textContent = "Subiendo " + file.name + "…";
+    submit.disabled = true;
+    try {
+      const signed = await fetch("{% url 'presign_upload' %}", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]").value },
+        body: JSON.stringify({ filename: file.name }),
+      }).then((r) => r.json());
+      if (signed.error) throw new Error(signed.error);
+
+      const body = new FormData();
+      Object.entries(signed.fields).forEach(([k, v]) => body.append(k, v));
+      body.append("file", file);
+      const put = await fetch(signed.url, { method: "POST", body });
+      if (!put.ok) throw new Error("S3 rechazó la subida (" + put.status + ")");
+
+      keyField.value = signed.key;
+      // El archivo ya esta en S3: se limpia el input para no mandarlo dos veces.
+      input.value = "";
+      hint.textContent = "✓ " + file.name + " subido";
+    } catch (err) {
+      keyField.value = "";
+      hint.textContent = "No se pudo subir (" + err.message + "). Se enviará con el formulario.";
+    } finally {
+      submit.disabled = false;
+    }
+  });
+})();
+</script>
+{% endif %}{% endblock %}
