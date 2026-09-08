@@ -119,6 +119,25 @@ def incr(key: str, ttl: int | None = None) -> int:
         return current + 1
 
 
+def incr_by(key: str, amount: int, ttl: int | None = None) -> int:
+    """Incrementa en `amount`. Lo usa el contador de gasto, que cuenta micro-dólares."""
+    client = _redis()
+    if client is not None:
+        try:
+            value = client.incrby(key, amount)
+            if value == amount and ttl:
+                client.expire(key, ttl)
+            return int(value)
+        except Exception as exc:  # noqa: BLE001
+            log.warning("Redis INCRBY falló (%s)", exc)
+    with _lock:
+        entry = _memory.get(key)
+        current = 0 if entry is None or _expired(entry) else int(entry[0])
+        expiry = entry[1] if entry and not _expired(entry) else (time.time() + ttl if ttl else None)
+        _memory[key] = (str(current + amount), expiry)
+        return current + amount
+
+
 def decr(key: str) -> int:
     client = _redis()
     if client is not None:

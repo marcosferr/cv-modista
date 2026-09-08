@@ -6,9 +6,38 @@ LinkedIn. Todo procesado en cola.
 
 **En producción:** https://cv-assistant.tereredev.com
 
-## Lo que define el diseño
+## Dos proveedores
 
-Corre entero sobre los modelos `:free` de OpenRouter. Ese tier tiene un cupo diario **por
+`LLM_PROVIDER` elige entre dos modos con caracteres opuestos. El resto de la app no
+cambia: caché, recuperación de JSON, validación de schema y detección de contaminación
+son idénticos para los dos.
+
+| | `openrouter` (default) | `bedrock` |
+|---|---|---|
+| Costo | gratis | ~USD 0,0052 por CV (194 CVs por dólar) |
+| Modelo | rota entre los `:free` disponibles | `deepseek.v3.2`, con `amazon.nova-lite-v1:0` de respaldo |
+| Estructura | `response_format` cuando el modelo lo soporta, si no el prompt y a rezar | **tool use forzado**: el modelo no puede contestar con prosa |
+| Tope | cupo diario de llamadas por cuenta | presupuesto en dólares por día |
+| Medido | 30–82 s por CV, entradas omitidas, a veces copia el ejemplo | 19 s por CV, todo el CV conservado, cero avisos |
+
+Con Bedrock la escalera de recuperación de JSON casi nunca actúa: `toolChoice` forzado
+devuelve el objeto ya parseado en `toolUse.input`, así que no hay fences, ni prosa
+alrededor, ni truncamiento a mitad de un string. Queda como red de seguridad.
+
+**Sobre DeepSeek v4 Flash:** no existe en Bedrock. Los DeepSeek disponibles son
+`deepseek.v3.2` (ON_DEMAND, el que se usa) y `deepseek.r1-v1:0`, que además necesita
+perfil de inferencia. Si querés bajar el costo otro orden de magnitud,
+`BEDROCK_MODEL_ID=amazon.nova-lite-v1:0` sale ~USD 0,0005 por CV.
+
+```bash
+# cambiar de modo en el servidor
+sudo -u cvmodista sed -i 's/^LLM_PROVIDER=.*/LLM_PROVIDER=bedrock/' /opt/cv-modista/app/.env
+sudo systemctl restart cv-modista-web cv-modista-worker
+```
+
+## Lo que define el modo gratuito
+
+El modo `openrouter` corre entero sobre los modelos `:free`. Ese tier tiene un cupo diario **por
 cuenta** (rotar de modelo no lo multiplica: OpenRouter lo gobierna globalmente), 20
 req/min, y modelos que truncan la salida, desaparecen de la lista y a veces devuelven
 basura. De ahí salen las tres decisiones centrales:
@@ -39,6 +68,8 @@ usuario y el clásico "el modelo generó LaTeX que no compila".
 | Detector de contaminación | Descarta al modelo que copia el ejemplo del prompt en vez de generar. Pasa el schema sin problemas, así que ninguna validación de forma lo agarra. |
 | Heurística de tamaño | Un modelo de 2.6B recorta el CV sin criterio y copia el ejemplo. Queda como último recurso, nunca primero. |
 
+Las tres últimas también corren en modo Bedrock: son del orquestador, no del proveedor.
+
 ## El `.tex` es descargable, así que tiene que valer en Overleaf
 
 Tectonic usa XeTeX y Overleaf usa pdfLaTeX por defecto, así que la regla vinculante es
@@ -66,8 +97,8 @@ make dev              # redis + worker + server
 ```bash
 make test             # 68 tests contra fixtures, sin gastar una llamada
 make probe            # prueba un modelo real. Gasta 1 llamada.
-make probe MODEL=nvidia/nemotron-3-super-120b-a12b:free
-.venv/bin/python manage.py probe_model --pool   # estado del pool y del cupo
+.venv/bin/python manage.py probe_model --pool                    # estado del pool y del cupo
+AWS_PROFILE=marcos .venv/bin/python manage.py probe_model --provider bedrock
 ```
 
 Con 50 llamadas diarias no se puede iterar un prompt clickeando la UI, así que
@@ -78,7 +109,8 @@ anti-invento se prueban enteros sin tocar la API.
 
 ```
 config/            settings, celery, urls
-apps/llm/          cliente de OpenRouter, rotación, cupo, prompts, schemas, escalera de JSON
+apps/llm/          orquestador, prompts, schemas, escalera de JSON, cupo y costo
+apps/llm/providers/  openrouter (rotación de :free) y bedrock (tool use forzado)
 apps/resume/       merge del patch, plantilla LaTeX, compilación, verificación ATS
 apps/jobs/         modelos, formularios, vistas, tasks de Celery, extracción de texto
 deploy/            nginx, systemd, script de redespliegue (ver deploy/README.md)

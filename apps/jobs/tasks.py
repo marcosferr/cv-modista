@@ -22,6 +22,7 @@ import zipfile
 from pathlib import Path
 
 from celery import Task, chain, shared_task
+from django.conf import settings
 from django.core.files.base import ContentFile
 
 from apps.jobs.models import Artifact, Job
@@ -60,11 +61,14 @@ class JobTask(Task):
 
 def _handle_llm_error(task: Task, job: Job, exc: LlmError):
     """Reintenta solo lo que se arregla esperando; el resto sube y mata el job."""
-    if exc.kind == "quota_exhausted":
+    if exc.kind in {"quota_exhausted", "budget_exhausted"}:
         job.mark(Job.Status.QUOTA_EXHAUSTED, error=str(exc))
         raise exc
     if exc.kind in RETRYABLE_KINDS and task.request.retries < task.max_retries:
-        delay = max(60, min(registry.wait_hint(), 600)) * (task.request.retries + 1)
+        # wait_hint solo tiene sentido con el pool de OpenRouter; con Bedrock la
+        # cadena es fija y alcanza con un backoff simple.
+        hint = registry.wait_hint() if settings.LLM_PROVIDER == "openrouter" else 60
+        delay = max(60, min(hint, 600)) * (task.request.retries + 1)
         log.warning("Job %s: %s, reintento en %ds", job.id, exc.kind, delay)
         raise task.retry(exc=exc, countdown=delay)
     raise exc
@@ -263,7 +267,10 @@ def resume_job(job: Job) -> None:
 
 @shared_task(name="jobs.sync_models")
 def sync_models() -> int:
-    """Beat diario: la lista de modelos :free rota seguido."""
+    """Beat: la lista de modelos :free rota seguido. Con Bedrock no hay nada que
+    sincronizar, la cadena de modelos es fija."""
+    if settings.LLM_PROVIDER != "openrouter":
+        return 0
     pool = registry.sync_pool(force=True)
     quota.reconcile()
     return len(pool)

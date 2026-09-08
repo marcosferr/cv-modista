@@ -16,7 +16,7 @@ from django.views.decorators.http import require_POST
 from apps.jobs import tasks, uploads
 from apps.jobs.forms import FinalCvForm, JobForm, SignupForm
 from apps.jobs.models import Artifact, Job
-from apps.llm import quota, registry
+from apps.llm.providers import get_provider
 
 log = logging.getLogger(__name__)
 
@@ -27,7 +27,9 @@ def _user_jobs_today(user) -> int:
 
 
 def _quota_context(user) -> dict:
-    status = quota.status()
+    # El proveedor decide qué significa "cupo": llamadas del día en OpenRouter,
+    # presupuesto en dólares en Bedrock. El formato del dict es el mismo.
+    status = get_provider().status()
     used = _user_jobs_today(user)
     limit = settings.JOBS_PER_USER_PER_DAY
     return {
@@ -60,8 +62,8 @@ def job_create(request):
                 f"Ya lanzaste {context['user_used']} CVs en las últimas 24 h "
                 f"(tope: {context['user_limit']})."
                 if context["user_blocked"]
-                else f"El cupo diario de OpenRouter está agotado. Se libera en "
-                     f"{context['quota']['reset_hours']} h."
+                else f"El cupo del proveedor está agotado ({context['quota']['detail']}). "
+                     f"Se libera en {context['quota']['reset_hours']} h."
             )
             messages.error(request, reason)
         elif form.is_valid():
@@ -87,7 +89,7 @@ def job_list(request):
 @login_required
 def job_detail(request, pk):
     job = get_object_or_404(Job, pk=pk, user=request.user)
-    return render(request, "jobs/detail.html", {"job": job, "pool": registry.describe_pool()})
+    return render(request, "jobs/detail.html", {"job": job})
 
 
 @login_required

@@ -5,11 +5,11 @@
 <p class="lede">Formato Harvard, sin foto, una columna, legible por ATS. Descargable en PDF y en LaTeX.</p>
 
 {% if quota.exhausted %}
-  <div class="note err">Cupo diario de OpenRouter agotado ({{ quota.used }}/{{ quota.limit }}). Se libera en {{ quota.reset_hours }} h.</div>
+  <div class="note err">Cupo diario agotado: {{ quota.detail }}. Se libera en {{ quota.reset_hours }} h.</div>
 {% elif user_blocked %}
   <div class="note err">Llegaste al tope de {{ user_limit }} CVs en 24 h. Probá más tarde.</div>
 {% else %}
-  <div class="note warn">Cupo del día: {{ quota.remaining }}/{{ quota.limit }} llamadas disponibles · tus CVs en 24 h: {{ user_used }}/{{ user_limit }}</div>
+  <div class="note warn">Cupo del día: {{ quota.detail }} · tus CVs en 24 h: {{ user_used }}/{{ user_limit }}</div>
 {% endif %}
 
 <form method="post" enctype="multipart/form-data" id="jobform">

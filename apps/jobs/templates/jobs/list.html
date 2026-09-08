@@ -2,7 +2,7 @@
 {% block title %}Mis CVs · cv-modista{% endblock %}
 {% block content %}
 <h1>Mis CVs</h1>
-<p class="lede">Cupo del día: {{ quota.remaining }}/{{ quota.limit }} llamadas · tus CVs en 24 h: {{ user_used }}/{{ user_limit }}</p>
+<p class="lede">Cupo del día: {{ quota.detail }} · tus CVs en 24 h: {{ user_used }}/{{ user_limit }}</p>
 <div class="panel">
   {% for job in jobs %}
     <div class="jobrow">

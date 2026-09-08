@@ -181,6 +181,20 @@ OPENROUTER_TIMEOUT = 120.0
 OPENROUTER_APP_URL = "http://localhost:8000"
 OPENROUTER_APP_NAME = "cv-modista"
 
+# --- proveedor de LLM -------------------------------------------------------
+# "openrouter": modelos :free, gratis pero flojos y con cupo diario por cuenta.
+# "bedrock": pago por token, con tool use forzado que garantiza JSON válido.
+LLM_PROVIDER = os.getenv("LLM_PROVIDER", "openrouter").lower()
+
+BEDROCK_REGION = os.getenv("BEDROCK_REGION", AWS_S3_REGION_NAME)
+# DeepSeek v4 Flash no existe en Bedrock: los DeepSeek disponibles son v3.2 (ON_DEMAND)
+# y r1 (requiere perfil de inferencia). V3.2 sale ~USD 0,0044 por CV.
+# Para bajar otro orden de magnitud: amazon.nova-lite-v1:0 (~USD 0,0005 por CV).
+BEDROCK_MODEL_ID = os.getenv("BEDROCK_MODEL_ID", "deepseek.v3.2")
+BEDROCK_FALLBACK_MODEL_ID = os.getenv("BEDROCK_FALLBACK_MODEL_ID", "amazon.nova-lite-v1:0")
+# Con registro abierto, un proveedor pago sin tope es una superficie de abuso.
+BEDROCK_DAILY_USD_BUDGET = float(os.getenv("BEDROCK_DAILY_USD_BUDGET", "2.00"))
+
 FAKE_LLM = _flag("FAKE_LLM")
 FIXTURES_DIR = BASE_DIR / "fixtures" / "llm"
 
