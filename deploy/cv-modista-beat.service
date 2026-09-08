@@ -1,0 +1,18 @@
+[Unit]
+Description=cv-modista beat (resincroniza el pool de modelos :free)
+After=network.target redis-server.service
+Requires=redis-server.service
+
+[Service]
+Type=simple
+User=cvmodista
+Group=cvmodista
+WorkingDirectory=/opt/cv-modista/app
+EnvironmentFile=/opt/cv-modista/app/.env
+ExecStart=/opt/cv-modista/app/.venv/bin/celery -A config beat --loglevel=info \
+    --schedule /opt/cv-modista/celerybeat-schedule
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

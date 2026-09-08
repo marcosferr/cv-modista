@@ -105,7 +105,10 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = "static/"
-STATIC_ROOT = BASE_DIR / "staticfiles"
+# En producción los estáticos viven fuera del directorio de la app: nginx corre como
+# www-data y necesita atravesar el path, y en el directorio de la app están el .env y
+# la base SQLite. Sacarlos afuera evita tener que abrir ese directorio.
+STATIC_ROOT = Path(os.getenv("DJANGO_STATIC_ROOT", BASE_DIR / "staticfiles"))
 STATICFILES_DIRS = [BASE_DIR / "static"]
 WHITENOISE_AUTOREFRESH = DEBUG
 

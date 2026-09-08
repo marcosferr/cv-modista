@@ -1,0 +1,22 @@
+[Unit]
+Description=cv-modista web (gunicorn)
+After=network.target
+Requires=redis-server.service
+
+[Service]
+Type=notify
+User=cvmodista
+Group=cvmodista
+WorkingDirectory=/opt/cv-modista/app
+EnvironmentFile=/opt/cv-modista/app/.env
+ExecStart=/opt/cv-modista/app/.venv/bin/gunicorn config.wsgi:application \
+    --bind 127.0.0.1:8001 \
+    --workers 3 \
+    --timeout 120 \
+    --access-logfile - --error-logfile -
+Restart=always
+RestartSec=5
+KillMode=mixed
+
+[Install]
+WantedBy=multi-user.target

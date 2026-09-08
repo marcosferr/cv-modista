@@ -1,0 +1,24 @@
+[Unit]
+Description=cv-modista worker (celery)
+After=network.target redis-server.service
+Requires=redis-server.service
+
+[Service]
+Type=simple
+User=cvmodista
+Group=cvmodista
+WorkingDirectory=/opt/cv-modista/app
+EnvironmentFile=/opt/cv-modista/app/.env
+# Concurrencia 1: el cuello de botella es el cupo de OpenRouter, no la CPU, y
+# compilar LaTeX en paralelo solo compite por memoria sin ganar nada.
+ExecStart=/opt/cv-modista/app/.venv/bin/celery -A config worker \
+    --loglevel=info --concurrency=1 --max-tasks-per-child=50
+Restart=always
+RestartSec=5
+KillMode=mixed
+# Tectonic cachea los paquetes acá; si se pierde, cada job los vuelve a bajar.
+Environment=HOME=/opt/cv-modista
+Environment=XDG_CACHE_HOME=/opt/cv-modista/.cache
+
+[Install]
+WantedBy=multi-user.target
