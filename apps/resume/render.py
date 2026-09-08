@@ -41,6 +41,8 @@ _UNICODE_MAP = {
     "…": "...", "•": "-", "·": "-", "●": "-", "▪": "-",
     " ": " ", " ": " ", " ": " ", "​": "", "﻿": "",
     "→": "->", "←": "<-", "≤": "<=", "≥": ">=",
+    # Ligaduras tipográficas: un ATS que busca "planificación" no encuentra "planiﬁcación".
+    "ﬁ": "fi", "ﬂ": "fl", "ﬀ": "ff", "ﬃ": "ffi", "ﬄ": "ffl", "ﬅ": "ft", "ﬆ": "st",
 }
 
 
