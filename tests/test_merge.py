@@ -60,11 +60,45 @@ def test_descarta_skills_inventadas_y_dedupea_las_difusas():
     assert any(w["kind"] == "invented_skill" for w in warnings)
 
 
-def test_avisa_cuando_omite_una_entrada():
+def test_nunca_descarta_un_empleo():
+    """Visto en producción: el modelo borró 1 de 2 empleos reales. Un hueco laboral sin
+    explicar hace más daño que una entrada poco relevante, y en un formato cronológico
+    inverso el hueco se ve."""
     patch = {"entries": [{"id": "exp1", "keep": False}]}
     final, warnings = merge_patch(PARSED, patch)
-    assert [e["organization"] for e in final["experience"]] == ["Acme"]
+    assert [e["organization"] for e in final["experience"]] == ["Acme", "Vieja SA"]
+    assert any(w["kind"] == "drops_ignored" for w in warnings)
+
+
+def test_nunca_descarta_formacion():
+    patch = {"entries": [{"id": "edu0", "keep": False}]}
+    final, _ = merge_patch(PARSED, patch)
+    assert len(final["education"]) == 1
+
+
+def test_descarta_un_extra_irrelevante():
+    """En extras sí es legítimo: un curso viejo que no aporta puede salir."""
+    parsed = {**PARSED, "extras": [
+        {"title": "Curso de Excel", "organization": "X", "dates": "2015", "details": []},
+        {"title": "AWS Solutions Architect", "organization": "AWS", "dates": "2023", "details": []},
+    ]}
+    patch = {"entries": [{"id": "xtr0", "keep": False}, {"id": "xtr1", "keep": True}]}
+    final, warnings = merge_patch(parsed, patch)
+    assert [e["title"] for e in final["extras"]] == ["AWS Solutions Architect"]
     assert any(w["kind"] == "dropped_entry" for w in warnings)
+
+
+def test_ignora_los_descartes_cuando_son_demasiados():
+    """Caso real: pidió descartar 6 de 7 extras, incluidas tres certificaciones AWS,
+    en una postulación a arquitecto de plataforma. Eso no es criterio, es pereza."""
+    extras = [{"title": f"Item {i}", "organization": "X", "dates": "2023", "details": []}
+              for i in range(7)]
+    parsed = {**PARSED, "extras": extras}
+    patch = {"entries": [{"id": f"xtr{i}", "keep": i == 0} for i in range(7)]}
+    final, warnings = merge_patch(parsed, patch)
+    assert len(final["extras"]) == 7, "gutteó la sección en vez de editarla"
+    assert any(w["kind"] == "drops_ignored" for w in warnings)
+    assert not any(w["kind"] == "dropped_entry" for w in warnings)
 
 
 def test_el_orden_del_patch_manda():

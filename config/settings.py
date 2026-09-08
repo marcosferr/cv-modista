@@ -163,8 +163,10 @@ CELERY_BROKER_URL = REDIS_URL
 CELERY_RESULT_BACKEND = REDIS_URL
 CELERY_TASK_ACKS_LATE = True
 CELERY_WORKER_PREFETCH_MULTIPLIER = 1
-CELERY_TASK_SOFT_TIME_LIMIT = 300
-CELERY_TASK_TIME_LIMIT = 360
+# El presupuesto de reintentos del LLM tiene que caber holgado acá dentro: si no, la
+# task muere con SoftTimeLimitExceeded en vez de devolver un error entendible.
+CELERY_TASK_SOFT_TIME_LIMIT = 600
+CELERY_TASK_TIME_LIMIT = 660
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 CELERY_TASK_TRACK_STARTED = True
 CELERY_RESULT_EXPIRES = 60 * 60 * 24
@@ -176,7 +178,7 @@ OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 # Cupo de cuenta para modelos :free. 50/día con <USD 10 de créditos, 1000/día con 10 o más.
 OPENROUTER_DAILY_QUOTA = int(os.getenv("OPENROUTER_DAILY_QUOTA", "50"))
-OPENROUTER_TIMEOUT = 120.0
+OPENROUTER_TIMEOUT = 100.0
 # Referer/Title opcionales: OpenRouter los usa para atribución en su ranking.
 OPENROUTER_APP_URL = "http://localhost:8000"
 OPENROUTER_APP_NAME = "cv-modista"
@@ -194,6 +196,10 @@ BEDROCK_MODEL_ID = os.getenv("BEDROCK_MODEL_ID", "deepseek.v3.2")
 BEDROCK_FALLBACK_MODEL_ID = os.getenv("BEDROCK_FALLBACK_MODEL_ID", "amazon.nova-lite-v1:0")
 # Con registro abierto, un proveedor pago sin tope es una superficie de abuso.
 BEDROCK_DAILY_USD_BUDGET = float(os.getenv("BEDROCK_DAILY_USD_BUDGET", "2.00"))
+
+# Tope de tiempo para toda la ronda de intentos de una llamada. Deja margen dentro del
+# soft_time_limit para el render y la compilación de LaTeX.
+LLM_BUDGET_SECONDS = float(os.getenv("LLM_BUDGET_SECONDS", "420"))
 
 FAKE_LLM = _flag("FAKE_LLM")
 FIXTURES_DIR = BASE_DIR / "fixtures" / "llm"

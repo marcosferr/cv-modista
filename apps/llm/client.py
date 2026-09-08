@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import time
 from dataclasses import dataclass, field
 
 from django.conf import settings
@@ -176,7 +177,8 @@ def complete_json(
 
     provider = get_provider(provider_name)
     request = Request(purpose=purpose, system=system, user=user, schema=schema,
-                      schema_name=schema_name, max_tokens=max_tokens, max_models=max_models)
+                      schema_name=schema_name, max_tokens=max_tokens, max_models=max_models,
+                      deadline=time.monotonic() + settings.LLM_BUDGET_SECONDS)
 
     notes: list[str] = []
     last_error: LlmError | None = None

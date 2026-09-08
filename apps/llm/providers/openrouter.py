@@ -122,6 +122,10 @@ class OpenRouterProvider:
 
         notes: list[str] = []
         for index, model in enumerate(pool[: request.max_models], start=1):
+            if not request.has_time_for(settings.OPENROUTER_TIMEOUT):
+                log.warning("Sin tiempo para otro intento (quedan %.0fs)", request.time_left())
+                notes.append("sin tiempo para más intentos")
+                break
             if not quota.reserve():
                 raise LlmError(
                     "quota_exhausted",

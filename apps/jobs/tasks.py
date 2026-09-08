@@ -22,6 +22,7 @@ import zipfile
 from pathlib import Path
 
 from celery import Task, chain, shared_task
+from celery.exceptions import SoftTimeLimitExceeded
 from django.conf import settings
 from django.core.files.base import ContentFile
 
@@ -50,12 +51,17 @@ class JobTask(Task):
         job = Job.objects.filter(pk=job_id).first()
         if job is None or job.is_terminal:
             return
-        status = (
-            Job.Status.QUOTA_EXHAUSTED
-            if isinstance(exc, LlmError) and exc.kind == "quota_exhausted"
-            else Job.Status.FAILED
-        )
-        job.mark(status, error=str(exc)[:2000])
+        if isinstance(exc, LlmError) and exc.kind in {"quota_exhausted", "budget_exhausted"}:
+            status, message = Job.Status.QUOTA_EXHAUSTED, str(exc)
+        elif isinstance(exc, SoftTimeLimitExceeded):
+            # str() de esta excepción es vacío: sin esto el usuario ve "()" y nada más.
+            status = Job.Status.FAILED
+            message = ("El paso tardó demasiado y se cortó. Suele pasar cuando varios "
+                       "modelos seguidos responden lento. Probá de nuevo con Reintentar: "
+                       "los pasos ya completados no se repiten.")
+        else:
+            status, message = Job.Status.FAILED, str(exc) or exc.__class__.__name__
+        job.mark(status, error=message[:2000])
         log.error("Job %s falló en %s: %s", job_id, self.name, exc)
 
 

@@ -11,6 +11,7 @@ intento que sale bien corta la generación sin gastar llamadas de más.
 
 from __future__ import annotations
 
+import time
 from collections.abc import Iterator
 from dataclasses import dataclass, field
 from typing import Protocol
@@ -25,6 +26,17 @@ class Request:
     schema_name: str
     max_tokens: int
     max_models: int = 4
+    # Instante de `time.monotonic()` a partir del cual no se empiezan más intentos.
+    # Sin esto el presupuesto de reintentos (4 modelos por el timeout de cada uno) puede
+    # superar el soft_time_limit de Celery y la task muere con SoftTimeLimitExceeded en
+    # vez de devolver un error entendible. Pasó en producción.
+    deadline: float | None = None
+
+    def time_left(self) -> float:
+        return float("inf") if self.deadline is None else self.deadline - time.monotonic()
+
+    def has_time_for(self, seconds: float) -> bool:
+        return self.time_left() >= seconds
 
 
 @dataclass(slots=True)

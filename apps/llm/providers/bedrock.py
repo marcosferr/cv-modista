@@ -111,6 +111,10 @@ class BedrockProvider:
 
         notes: list[str] = []
         for index, model_id in enumerate(self.models()[: request.max_models], start=1):
+            if not request.has_time_for(30):
+                log.warning("Sin tiempo para otro intento (quedan %.0fs)", request.time_left())
+                notes.append("sin tiempo para más intentos")
+                break
             started = time.monotonic()
             try:
                 body = self._converse(model_id, request)

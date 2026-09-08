@@ -184,3 +184,31 @@ def test_el_truncamiento_se_rechaza_igual_en_ambos():
     with pytest.raises(ContentRejected) as exc:
         _accept(attempt, schemas.ParsedCv, "", "")
     assert exc.value.kind == "truncated"
+
+
+# --- deadline del presupuesto de reintentos ---------------------------------
+
+
+def test_no_empieza_un_intento_si_no_hay_tiempo(bedrock):
+    """El bug que mató un job real: 4 modelos por el timeout de cada uno superaba el
+    soft_time_limit de Celery y la task moría con SoftTimeLimitExceeded."""
+    import time
+
+    vencido = Request(purpose="parse", system="s", user="u", schema=None, schema_name="x",
+                      max_tokens=100, deadline=time.monotonic() - 1)
+    assert list(bedrock.attempts(vencido)) == []
+    bedrock._client.converse.assert_not_called()
+
+
+def test_sin_deadline_no_hay_limite():
+    req = Request(purpose="p", system="s", user="u", schema=None, schema_name="x", max_tokens=1)
+    assert req.time_left() == float("inf") and req.has_time_for(10_000)
+
+
+def test_el_deadline_deja_pasar_mientras_haya_margen(bedrock):
+    import time
+
+    holgado = Request(purpose="parse", system="s", user="u", schema=None, schema_name="x",
+                      max_tokens=100, deadline=time.monotonic() + 300)
+    bedrock._client.converse.return_value = respuesta(texto='{"ok": true}')
+    assert next(bedrock.attempts(holgado)).model_id == "deepseek.v3.2"

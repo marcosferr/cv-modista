@@ -128,7 +128,11 @@ Reglas innegociables:
 - Reescribí en voz activa, empezando por un verbo de acción, sin pronombres
   ("Lideré la migración...", no "Yo fui responsable de...").
 - Máximo 5 bullets por entrada, de una a dos líneas cada uno.
-- Priorizá lo que la oferta pide de verdad. Lo irrelevante se acorta o se marca keep=false.
+- Priorizá lo que la oferta pide de verdad. Lo irrelevante se ACORTA, no se borra.
+- keep=false es SOLO para entradas xtr* (proyectos, cursos, actividades) que no aporten
+  nada. Nunca lo uses en exp* ni en edu*: borrar un empleo deja un hueco sin explicar en
+  el historial, y eso hace más daño que una línea poco relevante.
+- Nunca descartes certificaciones ni credenciales que la oferta menciona o roza.
 - "matched_keywords" son requisitos de la oferta que el CV respalda con evidencia real.
   "missing_requirements" son los que no. Sé honesto en ambos: sirven para que el
   candidato sepa dónde está parado.
@@ -221,8 +225,8 @@ Instrucciones:
 - Incluí en "entries" una entrada por cada id de arriba (exp*, edu*, xtr*), en el orden
   en que deben aparecer en el CV, lo más relevante primero.
 - "bullets" vacío conserva los bullets originales sin tocar. Usalo cuando ya están bien.
-- keep=false omite esa entrada del CV final. Usalo solo para lo irrelevante, nunca para
-  tapar un hueco en el historial laboral.
+- keep=false omite esa entrada. Solo se acepta en entradas xtr*, y como mucho en la
+  mitad de ellas. En exp* y edu* se ignora: no se borran empleos ni títulos.
 - Para las entradas edu* solo podés reescribir sus detalles, y casi siempre conviene
   dejarlas con "bullets" vacío.
 - "skills" son las del CV original reordenadas por relevancia. No agregues ninguna nueva.

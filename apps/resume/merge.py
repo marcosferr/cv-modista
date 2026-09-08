@@ -23,6 +23,10 @@ _YEAR_RE = re.compile(r"^(19|20)\d{2}$")
 
 SKILL_MATCH_THRESHOLD = 85
 
+# Si el modelo pide descartar más de esta fracción de los extras, no es criterio
+# editorial: se ignoran todos sus descartes.
+MAX_DROP_RATIO = 0.5
+
 
 def assign_ids(parsed: dict) -> dict:
     """Numera las entradas del parse. Estos ids son el contrato con el LLM."""
@@ -70,15 +74,20 @@ def _matches_known_skill(candidate: str, known: list[str]) -> bool:
 
 
 def _ordered_ids(patch: dict, prefix: str, fallback: list[dict]) -> list[str]:
-    """Ids del tipo pedido en el orden que dio el patch, con los no mencionados al final."""
-    patch_ids = [
-        entry.get("id", "")
+    """Orden final de una sección.
+
+    Solo las entradas que el modelo quiere CONSERVAR mandan en el orden. Si además se
+    ignoró un descarte, esa entrada vuelve a su lugar original en vez de quedar
+    promovida al principio: el modelo la mencionó para sacarla, no para destacarla.
+    """
+    priorizadas = [
+        str(entry.get("id", ""))
         for entry in patch.get("entries") or []
-        if str(entry.get("id", "")).startswith(prefix)
+        if str(entry.get("id", "")).startswith(prefix) and entry.get("keep", True)
     ]
-    seen = set(patch_ids)
-    tail = [entry["id"] for entry in fallback if entry.get("id") and entry["id"] not in seen]
-    return patch_ids + tail
+    seen = set(priorizadas)
+    resto = [e["id"] for e in fallback if e.get("id") and e["id"] not in seen]
+    return priorizadas + resto
 
 
 def merge_patch(parsed: dict, patch: dict, *, include_summary: bool = False) -> tuple[dict, list[dict]]:
@@ -98,15 +107,38 @@ def merge_patch(parsed: dict, patch: dict, *, include_summary: bool = False) -> 
         if entry.get("id")
     }
 
-    def build(prefix: str, group: str, text_field: str) -> list[dict]:
+    def build(prefix: str, group: str, text_field: str, droppable: bool = True) -> list[dict]:
+        entries = parsed.get(group) or []
+        ids = _ordered_ids(patch, prefix, entries)
+
+        # Un modelo flojo usa keep=false para acortar en vez de para editar. Visto en
+        # producción: descartó 1 de 2 empleos y 6 de 7 extras, incluidas tres
+        # certificaciones AWS, en una postulación a arquitecto de plataforma.
+        pedidos = [i for i in ids if i in patch_by_id and not patch_by_id[i].get("keep", True)]
+        honrar = droppable and entries and len(pedidos) <= max(1, int(len(entries) * MAX_DROP_RATIO))
+        if pedidos and not honrar:
+            warnings.append({
+                "kind": "drops_ignored",
+                "entry_id": prefix,
+                "label": SECTION_LABELS.get(prefix, prefix),
+                "message": (
+                    f"El modelo quiso descartar {len(pedidos)} de {len(entries)} entradas; "
+                    "se conservaron todas."
+                    if droppable else
+                    f"El modelo quiso descartar {len(pedidos)} entrada(s); en esta sección "
+                    "no se descarta nada, porque un hueco sin explicar pesa más que una "
+                    "línea poco relevante."
+                ),
+            })
+
         out = []
-        for entry_id in _ordered_ids(patch, prefix, parsed.get(group) or []):
+        for entry_id in ids:
             source = by_id.get(entry_id)
             if source is None:
                 continue
             instruction = patch_by_id.get(entry_id, {})
 
-            if instruction and not instruction.get("keep", True):
+            if honrar and instruction and not instruction.get("keep", True):
                 warnings.append({
                     "kind": "dropped_entry",
                     "entry_id": entry_id,
@@ -142,9 +174,12 @@ def merge_patch(parsed: dict, patch: dict, *, include_summary: bool = False) -> 
             out.append(merged)
         return out
 
-    experience = build("exp", "experience", "bullets")
-    education = build("edu", "education", "details")
-    extras = build("xtr", "extras", "details")
+    # La experiencia y la formación no se descartan nunca: un hueco laboral sin
+    # explicar hace más daño que una entrada poco relevante, y el formato Harvard es
+    # cronológico inverso, así que el hueco se ve. Lo irrelevante se acorta, no se borra.
+    experience = build("exp", "experience", "bullets", droppable=False)
+    education = build("edu", "education", "details", droppable=False)
+    extras = build("xtr", "extras", "details", droppable=True)
 
     # Skills: solo se reordenan las del CV. Una que no matchea con ninguna original se
     # descarta, porque agregar una skill que el candidato no declaró es inventar.
@@ -177,6 +212,9 @@ def merge_patch(parsed: dict, patch: dict, *, include_summary: bool = False) -> 
     return final_cv, warnings
 
 
+SECTION_LABELS = {"exp": "Experiencia", "edu": "Formación", "xtr": "Liderazgo y actividades"}
+
+
 def build_match_report(patch: dict, warnings: list[dict]) -> dict:
     matched = patch.get("matched_keywords") or []
     missing = patch.get("missing_requirements") or []
@@ -187,6 +225,7 @@ def build_match_report(patch: dict, warnings: list[dict]) -> dict:
         "score": round(100 * len(matched) / total) if total else 0,
         "flagged_numbers": sum(1 for w in warnings if w["kind"] == "invented_number"),
         "dropped_entries": sum(1 for w in warnings if w["kind"] == "dropped_entry"),
+        "drops_ignored": sum(1 for w in warnings if w["kind"] == "drops_ignored"),
     }
 
 
