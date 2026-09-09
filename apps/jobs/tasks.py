@@ -235,6 +235,7 @@ def render_cv(self, job_id: str) -> str:
         )
         _save_artifact(job, Artifact.Kind.ZIP, "cv.zip",
                        _bundle(result["tex"], pdf_bytes, job.final_cv))
+        _save_artifact(job, Artifact.Kind.PNG, "preview.png", result["preview"])
     except LatexError as exc:
         job.mark(Job.Status.FAILED, error=f"LaTeX: {exc}")
         raise

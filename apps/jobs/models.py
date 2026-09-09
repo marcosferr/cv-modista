@@ -116,6 +116,7 @@ class Artifact(models.Model):
         PDF = "pdf", "PDF"
         JSON = "json", "Datos JSON"
         ZIP = "zip", "Paquete completo"
+        PNG = "png", "Vista previa"
 
     job = models.ForeignKey(Job, on_delete=models.CASCADE, related_name="artifacts")
     kind = models.CharField(max_length=8, choices=Kind)

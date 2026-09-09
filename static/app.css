@@ -113,7 +113,7 @@ h3 {
   color: var(--muted); margin: 0 0 10px;
 }
 .lede { color: var(--muted); font-size: 16px; margin: 0 0 32px; max-width: 62ch; text-wrap: pretty; }
-.help { color: var(--muted); font-size: 13px; line-height: 1.5; margin: 6px 0 0; }
+.help { display: block; color: var(--muted); font-size: 13px; line-height: 1.5; margin: 6px 0 0; font-weight: 400; }
 .dim { color: var(--muted); }
 .mono { font-family: var(--mono); font-size: 12px; }
 
@@ -261,10 +261,17 @@ button:disabled { opacity: .45; cursor: not-allowed; filter: none; }
 /* --- vista previa del PDF --- */
 
 .preview {
-  border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden;
-  background: var(--sunken); box-shadow: var(--shadow);
+  display: block; border: 1px solid var(--line); border-radius: var(--r-md);
+  overflow: hidden; background: #fff; box-shadow: var(--shadow);
+  max-height: 660px; position: relative; transition: box-shadow .15s ease;
 }
-.preview iframe { display: block; width: 100%; height: 640px; border: 0; background: #fff; }
+.preview:hover { box-shadow: var(--shadow-lg); }
+.preview img { display: block; width: 100%; height: auto; }
+/* Se desvanece el corte inferior para que no parezca que falta contenido. */
+.preview::after {
+  content: ""; position: absolute; inset: auto 0 0 0; height: 90px; pointer-events: none;
+  background: linear-gradient(transparent, var(--panel));
+}
 
 /* --- bloques copiables --- */
 

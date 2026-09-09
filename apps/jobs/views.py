@@ -177,9 +177,10 @@ def job_download(request, pk, kind):
     if artifact is None:
         raise Http404("Ese archivo todavía no existe.")
 
-    filename = {"tex": "cv.tex", "pdf": "cv.pdf", "json": "cv.json", "zip": "cv.zip"}[kind]
-    # El PDF se muestra inline; el resto se descarga.
-    return FileResponse(artifact.file.open("rb"), as_attachment=(kind != "pdf"),
+    filename = {"tex": "cv.tex", "pdf": "cv.pdf", "json": "cv.json", "zip": "cv.zip",
+                "png": "preview.png"}[kind]
+    # El PDF y la vista previa se muestran inline; el resto se descarga.
+    return FileResponse(artifact.file.open("rb"), as_attachment=(kind not in {"pdf", "png"}),
                         filename=f"{job.target_role[:40].strip() or 'cv'}-{filename}")
 
 

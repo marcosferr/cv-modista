@@ -31,9 +31,26 @@ def test_el_pipeline_completo_deja_el_job_listo(completed):
 
 
 @needs_tectonic
-def test_genera_los_cuatro_artefactos(completed):
+def test_genera_todos_los_artefactos(completed):
     kinds = set(completed.artifacts.values_list("kind", flat=True))
-    assert kinds == {"tex", "pdf", "json", "zip"}
+    assert kinds == {"tex", "pdf", "json", "zip", "png"}
+
+
+@needs_tectonic
+def test_la_vista_previa_es_un_png_real(completed):
+    """Se genera en el servidor porque el visor de PDF del navegador dibuja su propia
+    barra de herramientas y sus miniaturas, y `#toolbar=0` ya no se respeta."""
+    datos = completed.artifact("png").file.read()
+    assert datos.startswith(b"\x89PNG\r\n\x1a\n")
+    assert len(datos) > 5000
+
+
+@needs_tectonic
+def test_la_vista_previa_se_sirve_inline(client, user, completed):
+    client.force_login(user)
+    r = client.get(f"/jobs/{completed.pk}/download/png/")
+    assert r.status_code == 200
+    assert "attachment" not in r.headers.get("Content-Disposition", "")
 
 
 @needs_tectonic

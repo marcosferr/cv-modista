@@ -84,6 +84,30 @@ class TectonicCompiler:
         return pdf_path
 
 
+PREVIEW_SCALE = 2.0
+
+
+def render_preview(pdf_path: Path, scale: float = PREVIEW_SCALE) -> bytes:
+    """Primera página como PNG.
+
+    Se genera en el servidor en vez de incrustar el PDF en un iframe: el visor nativo
+    del navegador dibuja su propia barra de herramientas y su panel de miniaturas, y
+    los parámetros `#toolbar=0` ya no se respetan. Una imagen se ve igual en todos lados.
+    """
+    import io
+
+    import pypdfium2 as pdfium
+
+    documento = pdfium.PdfDocument(str(pdf_path))
+    try:
+        imagen = documento[0].render(scale=scale).to_pil()
+        buffer = io.BytesIO()
+        imagen.save(buffer, format="PNG", optimize=True)
+        return buffer.getvalue()
+    finally:
+        documento.close()
+
+
 def page_count(pdf_path: Path) -> int:
     return len(PdfReader(str(pdf_path)).pages)
 
@@ -168,6 +192,7 @@ def compile_fitted(
     return {
         "tex": tex_source,
         "pdf_path": pdf_path,
+        "preview": render_preview(pdf_path),
         "pages": pages,
         "trimmed": trimmed,
         "ats_missing": ats_check(pdf_path, final_cv),

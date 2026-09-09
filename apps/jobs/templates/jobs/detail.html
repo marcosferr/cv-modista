@@ -50,9 +50,9 @@
     <div class="panel-head"><h2>Tu CV</h2>
       <span class="pill" style="margin-left:auto">{{ job.pages }} página{{ job.pages|pluralize }}</span>
     </div>
-    <div class="preview">
-      <iframe src="{% url 'job_download' job.pk 'pdf' %}#toolbar=0&navpanes=0" title="Vista previa del CV" loading="lazy"></iframe>
-    </div>
+    <a class="preview" href="{% url 'job_download' job.pk 'pdf' %}" target="_blank" rel="noopener" title="Abrir el PDF">
+      <img src="{% url 'job_download' job.pk 'png' %}" alt="Vista previa del CV generado" loading="lazy">
+    </a>
     <div class="btns" style="margin-top:18px">
       <a class="btn" href="{% url 'job_download' job.pk 'pdf' %}" download>Descargar PDF</a>
       <a class="btn ghost" href="{% url 'job_download' job.pk 'tex' %}">Fuente .tex</a>
@@ -68,7 +68,7 @@
       <div class="score" style="--pct: {{ job.match_report.score }}"><b>{{ job.match_report.score }}%</b></div>
       <div>
         <h2>Match con la oferta</h2>
-        <p class="help" style="margin:2px 0 0">{{ job.match_report.matched|length }} requisito{{ job.match_report.matched|length|pluralize }} cubierto{{ job.match_report.matched|length|pluralize }} de {{ job.match_report.matched|length|add:job.match_report.missing|length }}.</p>
+        <p class="help" style="margin:2px 0 0">{{ job.match_report.matched|length }} de {{ job.match_report.total }} requisitos cubiertos.</p>
       </div>
     </div>
     {% if job.match_report.matched %}

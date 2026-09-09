@@ -222,6 +222,7 @@ def build_match_report(patch: dict, warnings: list[dict]) -> dict:
     return {
         "matched": matched,
         "missing": missing,
+        "total": total,
         "score": round(100 * len(matched) / total) if total else 0,
         "flagged_numbers": sum(1 for w in warnings if w["kind"] == "invented_number"),
         "dropped_entries": sum(1 for w in warnings if w["kind"] == "dropped_entry"),

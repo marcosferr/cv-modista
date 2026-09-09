@@ -30,7 +30,7 @@ sudo -u cvmodista bash -c "
   cd $APP && set -a && source .env && set +a
   .venv/bin/pip install --quiet --upgrade django 'celery[redis]' redis httpx pydantic \
     python-dotenv jinja2 json-repair pypdf python-docx rapidfuzz boto3 django-storages \
-    whitenoise gunicorn
+    whitenoise gunicorn pypdfium2 pillow
   .venv/bin/python manage.py migrate --noinput
   .venv/bin/python manage.py collectstatic --noinput
 "

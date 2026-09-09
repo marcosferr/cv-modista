@@ -15,11 +15,12 @@ dependencies = [
     "pypdf>=5.0",
     "python-docx>=1.1",
     "rapidfuzz>=3.10",
-    "tenacity>=9.0",
     "boto3>=1.43.90",
     "django-storages>=1.14.6",
     "whitenoise>=6.12.0",
     "gunicorn>=26.2.0",
+    "pypdfium2>=4.30",
+    "pillow>=11.0",
 ]
 
 [project.optional-dependencies]
@@ -27,11 +28,13 @@ dependencies = [
 # Pip puro, sin binarios de sistema y sin torch.
 ocr = [
     "rapidocr-onnxruntime>=1.3",
-    "pypdfium2>=4.30",
 ]
 
 [dependency-groups]
 dev = [
+    # El perfil de AWS del usuario usa el proveedor "login", que en boto3 exige
+    # botocore[crt]. En la EC2 no hace falta: ahi va con el rol de instancia.
+    "botocore[crt]>=1.35",
     "pytest>=8",
     "pytest-django>=4.9",
     "ruff>=0.7",
