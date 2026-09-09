@@ -2,22 +2,23 @@
 {% block title %}Nuevo CV · cv-modista{% endblock %}
 {% block content %}
 <h1>Adaptá tu CV a una oferta</h1>
-<p class="lede">Formato Harvard, sin foto, una columna, legible por ATS. Descargable en PDF y en LaTeX.</p>
+<p class="lede">Pegá el aviso y tu CV actual. Sale un currículum en formato Harvard escrito para ese puesto, en PDF y en LaTeX, más el pack de LinkedIn.</p>
 
 {% if quota.exhausted %}
-  <div class="note err">Cupo diario agotado: {{ quota.detail }}. Se libera en {{ quota.reset_hours }} h.</div>
+  <div class="note err"><span>⚠</span><span><strong>Cupo diario agotado</strong> — {{ quota.detail }}. Se libera en {{ quota.reset_hours }} h.</span></div>
 {% elif user_blocked %}
-  <div class="note err">Llegaste al tope de {{ user_limit }} CVs en 24 h. Probá más tarde.</div>
+  <div class="note err"><span>⚠</span><span><strong>Llegaste al tope</strong> de {{ user_limit }} CVs en 24 h. Probá más tarde.</span></div>
 {% else %}
-  <div class="note warn">Cupo del día: {{ quota.detail }} · tus CVs en 24 h: {{ user_used }}/{{ user_limit }}</div>
+  <div class="note info"><span>◷</span><span>Cupo del día: {{ quota.detail }} · tus CVs en 24 h: {{ user_used }}/{{ user_limit }}</span></div>
 {% endif %}
 
 <form method="post" enctype="multipart/form-data" id="jobform">
   {% csrf_token %}
-  {% if form.non_field_errors %}<div class="note err">{{ form.non_field_errors.0 }}</div>{% endif %}
+  {% if form.non_field_errors %}<div class="note err"><span>⚠</span><span>{{ form.non_field_errors.0 }}</span></div>{% endif %}
   {{ form.cv_s3_key }}
 
   <div class="panel">
+    <div class="panel-head"><span class="step">1</span><h2>El puesto</h2></div>
     <div class="field">
       <label for="{{ form.target_role.id_for_label }}">{{ form.target_role.label }}</label>
       {{ form.target_role }}{{ form.target_role.errors }}
@@ -30,51 +31,62 @@
   </div>
 
   <div class="panel">
+    <div class="panel-head"><span class="step">2</span><h2>Tu CV actual</h2></div>
     <div class="field">
-      <label for="{{ form.cv_source_text.id_for_label }}">{{ form.cv_source_text.label }}</label>
+      <label for="{{ form.cv_source_text.id_for_label }}">Pegalo como texto</label>
       {{ form.cv_source_text }}
       <p class="help">{{ form.cv_source_text.help_text }}</p>{{ form.cv_source_text.errors }}
     </div>
     <div class="field">
-      <label for="{{ form.cv_file.id_for_label }}">{{ form.cv_file.label }}</label>
-      {{ form.cv_file }}
-      <p class="help" id="uphint">{{ form.cv_file.help_text }}</p>{{ form.cv_file.errors }}
+      <label>…o subí el archivo</label>
+      <label class="drop" id="drop">
+        {{ form.cv_file }}
+        <span class="title" id="droptitle">Arrastrá tu CV o <b>elegí un archivo</b></span>
+        <p class="help" id="drophelp">PDF, DOCX o TXT · hasta 10 MB · los PDF de diseño se leen por columnas</p>
+      </label>
+      {{ form.cv_file.errors }}
     </div>
   </div>
 
   <div class="panel">
+    <div class="panel-head"><span class="step">3</span><h2>Ajustes</h2></div>
     <div class="row">
       <div class="field">
         <label for="{{ form.language.id_for_label }}">{{ form.language.label }}</label>
         {{ form.language }}
       </div>
-      <div class="field check" style="align-self:end;padding-bottom:9px">
+      <div class="field check">
         {{ form.include_summary }}
         <label for="{{ form.include_summary.id_for_label }}">{{ form.include_summary.label }}
-          <span class="help" style="display:block">{{ form.include_summary.help_text }}</span>
+          <span class="help">{{ form.include_summary.help_text }}</span>
         </label>
       </div>
     </div>
-    <button type="submit" id="go" {% if blocked %}disabled{% endif %}>Generar CV</button>
+    <button class="lg" type="submit" id="go" {% if blocked %}disabled{% endif %}>Generar CV</button>
   </div>
 </form>
 {% endblock %}
 
-{% block scripts %}{% if s3_enabled %}
+{% block scripts %}
 <script>
-// Subida directa a S3 con POST prefirmado: el archivo no pasa por gunicorn, asi que
-// una subida grande no ocupa un worker mientras dura.
 (function () {
   const input = document.getElementById("{{ form.cv_file.id_for_label }}");
+  const drop = document.getElementById("drop");
+  const title = document.getElementById("droptitle");
+  const help = document.getElementById("drophelp");
   const keyField = document.getElementById("{{ form.cv_s3_key.id_for_label }}");
-  const hint = document.getElementById("uphint");
   const submit = document.getElementById("go");
-  if (!input || !keyField) return;
+  if (!input) return;
+
+  const listo = (nombre) => { drop.classList.add("ready"); title.textContent = "✓ " + nombre; };
 
   input.addEventListener("change", async () => {
     const file = input.files[0];
-    if (!file) { keyField.value = ""; return; }
-    hint.textContent = "Subiendo " + file.name + "…";
+    if (!file) { drop.classList.remove("ready"); if (keyField) keyField.value = ""; return; }
+    {% if s3_enabled %}
+    // Subida directa a S3 con POST prefirmado: el archivo no pasa por gunicorn, asi
+    // que una subida grande no ocupa un worker mientras dura.
+    title.textContent = "Subiendo " + file.name + "…";
     submit.disabled = true;
     try {
       const signed = await fetch("{% url 'presign_upload' %}", {
@@ -83,24 +95,39 @@
         body: JSON.stringify({ filename: file.name }),
       }).then((r) => r.json());
       if (signed.error) throw new Error(signed.error);
-
       const body = new FormData();
       Object.entries(signed.fields).forEach(([k, v]) => body.append(k, v));
       body.append("file", file);
       const put = await fetch(signed.url, { method: "POST", body });
       if (!put.ok) throw new Error("S3 rechazó la subida (" + put.status + ")");
-
       keyField.value = signed.key;
-      // El archivo ya esta en S3: se limpia el input para no mandarlo dos veces.
-      input.value = "";
-      hint.textContent = "✓ " + file.name + " subido";
+      input.value = "";           // ya está en S3: no lo mandamos dos veces
+      listo(file.name);
+      help.textContent = "Subido y listo para procesar";
     } catch (err) {
       keyField.value = "";
-      hint.textContent = "No se pudo subir (" + err.message + "). Se enviará con el formulario.";
+      listo(file.name);
+      help.textContent = "Se enviará con el formulario (" + err.message + ")";
     } finally {
       submit.disabled = false;
+    }
+    {% else %}
+    listo(file.name);
+    help.textContent = (file.size / 1048576).toFixed(1) + " MB";
+    {% endif %}
+  });
+
+  ["dragenter", "dragover"].forEach((e) =>
+    drop.addEventListener(e, (ev) => { ev.preventDefault(); drop.style.borderColor = "var(--accent)"; }));
+  ["dragleave", "drop"].forEach((e) =>
+    drop.addEventListener(e, () => { drop.style.borderColor = ""; }));
+  drop.addEventListener("drop", (ev) => {
+    ev.preventDefault();
+    if (ev.dataTransfer.files.length) {
+      input.files = ev.dataTransfer.files;
+      input.dispatchEvent(new Event("change"));
     }
   });
 })();
 </script>
-{% endif %}{% endblock %}
+{% endblock %}

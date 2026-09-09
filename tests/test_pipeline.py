@@ -173,5 +173,6 @@ def test_el_tope_por_usuario_frena_el_envio(client, user, settings, db):
         "language": "es", "cv_source_text": "Ana Gómez, backend developer. " * 20,
     })
     assert response.status_code == 200
-    assert "tope de 1" in response.content.decode()
+    # Se afirma sobre el mensaje del servidor, no sobre el marcado del template.
+    assert "(tope: 1)" in response.content.decode()
     assert Job.objects.filter(target_role="Otro").count() == 0

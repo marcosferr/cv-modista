@@ -3,33 +3,43 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
   <title>{% block title %}cv-modista{% endblock %}</title>
   <link rel="stylesheet" href="{% static 'app.css' %}">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✂️</text></svg>">
 </head>
 <body>
 <header class="top">
   <div class="wrap">
-    <a class="brand" href="{% url 'job_create' %}">cv<span>-modista</span></a>
+    <a class="brand" href="{% url 'job_create' %}">cv<span>modista</span></a>
     <nav>
       {% if user.is_authenticated %}
         <a href="{% url 'job_create' %}">Nuevo CV</a>
         <a href="{% url 'job_list' %}">Mis CVs</a>
-        <form method="post" action="{% url 'logout' %}" style="display:inline">
-          {% csrf_token %}<button class="btn ghost" style="padding:5px 12px">Salir</button>
+        <form method="post" action="{% url 'logout' %}">
+          {% csrf_token %}<button class="btn ghost sm" type="submit">Salir</button>
         </form>
       {% else %}
         <a href="{% url 'login' %}">Entrar</a>
-        <a href="{% url 'signup' %}">Crear cuenta</a>
+        <a class="btn sm" href="{% url 'signup' %}">Crear cuenta</a>
       {% endif %}
     </nav>
   </div>
 </header>
+
 <main class="wrap">
   {% for message in messages %}
     <div class="note {% if message.tags == 'error' %}err{% elif message.tags == 'success' %}ok{% else %}warn{% endif %}">{{ message }}</div>
   {% endfor %}
   {% block content %}{% endblock %}
 </main>
+
+<footer class="foot">
+  <div class="wrap">
+    <span>Formato Harvard · sin foto · una columna · legible por ATS</span>
+    <span class="sep">El <code>.tex</code> compila en Overleaf sin cambios</span>
+  </div>
+</footer>
 {% block scripts %}{% endblock %}
 </body>
 </html>

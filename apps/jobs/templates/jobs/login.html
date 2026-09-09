@@ -1,13 +1,16 @@
 {% extends "base.html" %}
 {% block title %}Entrar · cv-modista{% endblock %}
 {% block content %}
-<h1>Entrar</h1>
-<form method="post" class="panel" style="max-width:420px">
-  {% csrf_token %}
-  {% if form.non_field_errors %}<div class="note err">{{ form.non_field_errors.0 }}</div>{% endif %}
-  <div class="field"><label for="{{ form.username.id_for_label }}">Usuario</label>{{ form.username }}</div>
-  <div class="field"><label for="{{ form.password.id_for_label }}">Contraseña</label>{{ form.password }}</div>
-  <button>Entrar</button>
-  <p class="help" style="margin-top:14px">¿No tenés cuenta? <a href="{% url 'signup' %}">Creá una</a>.</p>
-</form>
+<div class="auth">
+  <h1>Entrar</h1>
+  <p class="lede">Tus CVs quedan asociados a tu cuenta y solo vos los ves.</p>
+  <form method="post" class="panel">
+    {% csrf_token %}
+    {% if form.non_field_errors %}<div class="note err"><span>⚠</span><span>{{ form.non_field_errors.0 }}</span></div>{% endif %}
+    <div class="field"><label for="{{ form.username.id_for_label }}">Usuario</label>{{ form.username }}</div>
+    <div class="field"><label for="{{ form.password.id_for_label }}">Contraseña</label>{{ form.password }}</div>
+    <button type="submit">Entrar</button>
+    <p class="help" style="margin-top:16px">¿No tenés cuenta? <a href="{% url 'signup' %}">Creá una</a>.</p>
+  </form>
+</div>
 {% endblock %}

@@ -1,96 +1,146 @@
 {% extends "base.html" %}
 {% block title %}{{ job.target_role }} · cv-modista{% endblock %}
 {% block content %}
+
 <h1>{{ job.target_role }}</h1>
-<p class="lede">
-  <span class="pill {% if job.status == 'DONE' %}ok{% elif job.status == 'FAILED' or job.status == 'QUOTA_EXHAUSTED' %}err{% else %}run{% endif %}" id="pill">{{ job.get_status_display }}</span>
-  <span class="dim">creado {{ job.created_at|date:"d/m/Y H:i" }}</span>
+<p class="lede" style="margin-bottom:26px">
+  <span class="pill {% if job.status == 'DONE' %}ok{% elif job.status == 'FAILED' or job.status == 'QUOTA_EXHAUSTED' %}err{% else %}run{% endif %}" id="pill">
+    <i class="dot"></i>{{ job.get_status_display }}
+  </span>
+  <span class="dim" style="margin-left:8px">{{ job.created_at|date:"d/m/Y H:i" }}</span>
 </p>
 
-<div class="panel">
-  <div class="meter"><i id="bar" style="width: {{ job.progress }}%"></i></div>
-  <div class="kv">
-    <span>CV leído: {{ job.get_extraction_method_display|default:job.extraction_method }}</span>
-    {% if job.models_used %}<span>Modelos: {{ job.models_used|join:", " }}</span>{% endif %}
-    {% if job.pages %}<span>{{ job.pages }} página{{ job.pages|pluralize }}</span>{% endif %}
-    {% if job.trimmed_bullets %}<span>{{ job.trimmed_bullets }} bullet{{ job.trimmed_bullets|pluralize }} recortado{{ job.trimmed_bullets|pluralize }} para entrar en una página</span>{% endif %}
+{% if not job.is_terminal %}
+  <div class="panel">
+    <h3>Procesando</h3>
+    <div class="meter"><i id="bar" style="width: {{ job.progress }}%"></i></div>
+    <p class="help" id="steptext">Leyendo el CV, adaptándolo a la oferta y compilando el PDF. Suele tardar entre 20 y 60 segundos.</p>
   </div>
-</div>
+{% endif %}
 
-{% if job.error %}<div class="note err"><strong>{{ job.get_status_display }}.</strong> {{ job.error }}</div>{% endif %}
+{% if job.error %}
+  <div class="note err"><span>⚠</span><span><strong>{{ job.get_status_display }}.</strong> {{ job.error }}</span></div>
+{% endif %}
+
 {% if job.status == 'FAILED' or job.status == 'QUOTA_EXHAUSTED' %}
   <form method="post" action="{% url 'job_retry' job.pk %}" class="panel">
     {% csrf_token %}
-    <p class="help" style="margin-bottom:10px">Reintenta desde el último paso completado: lo que ya se resolvió no vuelve a gastar cupo.</p>
-    <button>Reintentar</button>
+    <h2>Reintentar</h2>
+    <p class="help" style="margin-bottom:16px">Retoma desde el último paso completado: lo que ya se resolvió no vuelve a gastar cupo.</p>
+    <button type="submit">Reintentar</button>
   </form>
 {% endif %}
 
 {% if job.status == 'DONE' %}
-  <div class="panel">
-    <h2 style="margin-top:0">Descargas</h2>
-    <div class="btns">
-      <a class="btn" href="{% url 'job_download' job.pk 'pdf' %}">PDF renderizado</a>
-      <a class="btn ghost" href="{% url 'job_download' job.pk 'tex' %}">Fuente .tex</a>
-      <a class="btn ghost" href="{% url 'job_download' job.pk 'zip' %}">ZIP para Overleaf</a>
-      <a class="btn ghost" href="{% url 'job_download' job.pk 'json' %}">JSON</a>
-    </div>
-    <p class="help">El .tex compila sin cambios con pdflatex, xelatex y lualatex.</p>
-  </div>
-
-  {% if job.ats_missing %}
-    <div class="note err"><strong>Aviso de ATS.</strong> Estos datos no se pudieron extraer del PDF:
-      {{ job.ats_missing|join:" · " }}</div>
-  {% endif %}
 
   {% if job.flagged_numbers %}
-    <div class="note warn"><strong>{{ job.flagged_numbers|length }} cifra{{ job.flagged_numbers|length|pluralize }} sin respaldo en tu CV original.</strong>
-      Revisalas antes de enviar: <a href="{% url 'job_review' job.pk %}">ver el diff</a>.</div>
+    <div class="note warn"><span>⚠</span><span>
+      <strong>{{ job.flagged_numbers|length }} cifra{{ job.flagged_numbers|length|pluralize }} sin respaldo en tu CV original.</strong>
+      El modelo las agregó por su cuenta. <a href="{% url 'job_review' job.pk %}">Revisalas antes de enviar</a>.
+    </span></div>
+  {% endif %}
+  {% if job.match_report.drops_ignored %}
+    <div class="note info"><span>◆</span><span>El modelo quiso descartar entradas de tu CV; se conservaron todas. <a href="{% url 'job_review' job.pk %}">Ver detalle</a>.</span></div>
+  {% endif %}
+  {% if job.ats_missing %}
+    <div class="note err"><span>⚠</span><span><strong>Aviso de ATS.</strong> Estos datos no se pudieron extraer del PDF: {{ job.ats_missing|join:" · " }}</span></div>
   {% endif %}
 
   <div class="panel">
-    <h2 style="margin-top:0">Match con la oferta <span class="pill">{{ job.match_report.score }}%</span></h2>
+    <div class="panel-head"><h2>Tu CV</h2>
+      <span class="pill" style="margin-left:auto">{{ job.pages }} página{{ job.pages|pluralize }}</span>
+    </div>
+    <div class="preview">
+      <iframe src="{% url 'job_download' job.pk 'pdf' %}#toolbar=0&navpanes=0" title="Vista previa del CV" loading="lazy"></iframe>
+    </div>
+    <div class="btns" style="margin-top:18px">
+      <a class="btn" href="{% url 'job_download' job.pk 'pdf' %}" download>Descargar PDF</a>
+      <a class="btn ghost" href="{% url 'job_download' job.pk 'tex' %}">Fuente .tex</a>
+      <a class="btn ghost" href="{% url 'job_download' job.pk 'zip' %}">ZIP para Overleaf</a>
+      <a class="btn ghost" href="{% url 'job_review' job.pk %}">Revisar y editar</a>
+    </div>
+    <p class="help">El <code>.tex</code> compila sin cambios con pdflatex, xelatex y lualatex.
+      {% if job.trimmed_bullets %} Se recortaron {{ job.trimmed_bullets }} bullet{{ job.trimmed_bullets|pluralize }} para que entrara en una página.{% endif %}</p>
+  </div>
+
+  <div class="panel">
+    <div class="match-head">
+      <div class="score" style="--pct: {{ job.match_report.score }}"><b>{{ job.match_report.score }}%</b></div>
+      <div>
+        <h2>Match con la oferta</h2>
+        <p class="help" style="margin:2px 0 0">{{ job.match_report.matched|length }} requisito{{ job.match_report.matched|length|pluralize }} cubierto{{ job.match_report.matched|length|pluralize }} de {{ job.match_report.matched|length|add:job.match_report.missing|length }}.</p>
+      </div>
+    </div>
     {% if job.match_report.matched %}
-      <p class="help">Requisitos que cubrís</p>
+      <h3>Lo que cubrís</h3>
       <ul class="chips">{% for k in job.match_report.matched %}<li>{{ k }}</li>{% endfor %}</ul>
     {% endif %}
     {% if job.match_report.missing %}
-      <p class="help" style="margin-top:14px">Requisitos que no cubrís</p>
+      <h3 style="margin-top:20px">Lo que no cubrís</h3>
       <ul class="chips miss">{% for k in job.match_report.missing %}<li>{{ k }}</li>{% endfor %}</ul>
     {% endif %}
-    <p style="margin-top:18px"><a class="btn ghost" href="{% url 'job_review' job.pk %}">Revisar y editar</a></p>
   </div>
 
   {% if job.linkedin_pack.headline or job.linkedin_pack.about %}
   <div class="panel">
-    <h2 style="margin-top:0">Pack de LinkedIn</h2>
+    <h2 style="margin-bottom:20px">Pack de LinkedIn</h2>
     {% if job.linkedin_pack.headline %}
-      <p class="help">Titular</p><p>{{ job.linkedin_pack.headline }}</p>{% endif %}
+      <div class="copyblock">
+        <div class="head"><h3>Titular</h3><button class="btn ghost sm copy" type="button" data-copy="ln-headline">Copiar</button></div>
+        <div class="body" id="ln-headline">{{ job.linkedin_pack.headline }}</div>
+      </div>
+    {% endif %}
     {% if job.linkedin_pack.about %}
-      <p class="help">Acerca de</p><p>{{ job.linkedin_pack.about }}</p>{% endif %}
+      <div class="copyblock">
+        <div class="head"><h3>Acerca de</h3><button class="btn ghost sm copy" type="button" data-copy="ln-about">Copiar</button></div>
+        <div class="body" id="ln-about">{{ job.linkedin_pack.about }}</div>
+      </div>
+    {% endif %}
     {% if job.linkedin_pack.recruiter_message %}
-      <p class="help">Mensaje al recruiter</p><p>{{ job.linkedin_pack.recruiter_message }}</p>{% endif %}
+      <div class="copyblock">
+        <div class="head"><h3>Mensaje al recruiter</h3><button class="btn ghost sm copy" type="button" data-copy="ln-msg">Copiar</button></div>
+        <div class="body" id="ln-msg">{{ job.linkedin_pack.recruiter_message }}</div>
+      </div>
+    {% endif %}
   </div>
   {% endif %}
-{% endif %}
 
-{% if job.notes %}
-  <p class="help mono">Rotación de modelos: {{ job.notes|join:" · " }}</p>
+  <div class="kv" style="padding:0 4px">
+    <span>CV leído: {{ job.extraction_method }}</span>
+    {% if job.models_used %}<span>Modelo: {{ job.models_used|join:", " }}</span>{% endif %}
+    {% if job.notes %}<span class="mono">{{ job.notes|join:" · " }}</span>{% endif %}
+  </div>
 {% endif %}
 {% endblock %}
 
 {% block scripts %}
+<script>
+document.querySelectorAll(".copy").forEach((b) => {
+  b.addEventListener("click", async () => {
+    const texto = document.getElementById(b.dataset.copy).textContent.trim();
+    try { await navigator.clipboard.writeText(texto); } catch (e) {
+      // clipboard falla sin https o sin permiso: se selecciona para copiar a mano
+      const r = document.createRange();
+      r.selectNodeContents(document.getElementById(b.dataset.copy));
+      getSelection().removeAllRanges(); getSelection().addRange(r);
+    }
+    const antes = b.textContent;
+    b.textContent = "✓ Copiado";
+    setTimeout(() => { b.textContent = antes; }, 1600);
+  });
+});
+</script>
 {% if not job.is_terminal %}
 <script>
-// Polling simple del endpoint de estado. Sin dependencias: la app tiene que andar
-// aunque el server no tenga salida a internet.
+// Polling del endpoint de estado. Sin dependencias: la app tiene que andar aunque el
+// server no tenga salida a internet.
 (function () {
   const bar = document.getElementById("bar"), pill = document.getElementById("pill");
   const tick = async () => {
     try {
       const s = await fetch("{% url 'job_status' job.pk %}", { cache: "no-store" }).then(r => r.json());
       bar.style.width = s.progress + "%";
-      pill.textContent = s.label;
+      pill.innerHTML = '<i class="dot"></i>' + s.label;
       if (s.terminal) { location.reload(); return; }
     } catch (e) { /* el worker puede estar reiniciando: se reintenta */ }
     setTimeout(tick, 2000);

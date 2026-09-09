@@ -2,37 +2,40 @@
 {% block title %}Revisar · {{ job.target_role }}{% endblock %}
 {% block content %}
 <h1>Revisar y editar</h1>
-<p class="lede">Guardar recompila el PDF al instante y <strong>no gasta ninguna llamada al LLM</strong>.</p>
+<p class="lede">Guardar recompila el PDF al instante y <strong>no gasta ninguna llamada al modelo</strong>.</p>
 
 {% if job.flagged_numbers %}
-  <div class="note warn"><strong>{{ job.flagged_numbers|length }} cifra{{ job.flagged_numbers|length|pluralize }} sin respaldo.</strong>
-    Están resaltadas abajo. El modelo las agregó y tu CV original no las tiene: corregilas o borralas.</div>
+  <div class="note warn"><span>⚠</span><span><strong>{{ job.flagged_numbers|length }} cifra{{ job.flagged_numbers|length|pluralize }} sin respaldo.</strong>
+    Están resaltadas abajo: el modelo las agregó y tu CV original no las tiene.</span></div>
 {% endif %}
+{% for w in job.warnings %}{% if w.kind == 'drops_ignored' or w.kind == 'invented_skill' %}
+  <div class="note info"><span>◆</span><span>{{ w.message }}</span></div>
+{% endif %}{% endfor %}
 
-<h2>Qué cambió</h2>
 <div class="panel">
+  <h2 style="margin-bottom:18px">Qué cambió</h2>
   {% for row in diff %}
-    <p style="font-weight:650;margin:{% if not forloop.first %}22px{% else %}0{% endif %} 0 4px">{{ row.label }}
-      {% if not row.changed %}<span class="pill">sin cambios</span>{% endif %}</p>
+    <div class="entry-title">{{ row.label }}
+      {% if not row.changed %}<span class="pill">sin cambios</span>{% endif %}</div>
     {% for pair in row.pairs %}
-      <div class="diff">
+      <div class="diffrow"><div class="diff">
         <div class="before">{{ pair.before|default:"—" }}</div>
         <div class="after {% if pair.flagged %}flagged{% endif %}">{{ pair.after }}</div>
-      </div>
+      </div></div>
     {% endfor %}
   {% empty %}
     <p class="dim">No hay experiencia laboral en el CV final.</p>
   {% endfor %}
 </div>
 
-<h2>Editar el CV final</h2>
 <form method="post" class="panel">
   {% csrf_token %}
-  <p class="help" style="margin-bottom:8px">JSON que alimenta la plantilla LaTeX. Editalo y guardá para recompilar.</p>
+  <h2>Editar el CV final</h2>
+  <p class="help" style="margin-bottom:12px">Este JSON alimenta la plantilla LaTeX. Editalo y guardá para recompilar.</p>
   {{ form.payload }}{{ form.payload.errors }}
-  <p style="margin-top:14px" class="btns">
-    <button>Guardar y recompilar</button>
+  <div class="btns" style="margin-top:16px">
+    <button type="submit">Guardar y recompilar</button>
     <a class="btn ghost" href="{% url 'job_detail' job.pk %}">Volver</a>
-  </p>
+  </div>
 </form>
 {% endblock %}
