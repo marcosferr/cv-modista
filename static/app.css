@@ -260,18 +260,21 @@ button:disabled { opacity: .45; cursor: not-allowed; filter: none; }
 
 /* --- vista previa del PDF --- */
 
+/* La vista previa siempre es una pagina, asi que se muestra entera: recortarla
+   escondia contenido que entraba igual. */
 .preview {
   display: block; border: 1px solid var(--line); border-radius: var(--r-md);
   overflow: hidden; background: #fff; box-shadow: var(--shadow);
-  max-height: 660px; position: relative; transition: box-shadow .15s ease;
+  position: relative; transition: box-shadow .15s ease, transform .15s ease;
 }
-.preview:hover { box-shadow: var(--shadow-lg); }
+.preview:hover { box-shadow: var(--shadow-lg); transform: translateY(-2px); }
 .preview img { display: block; width: 100%; height: auto; }
-/* Se desvanece el corte inferior para que no parezca que falta contenido. */
-.preview::after {
-  content: ""; position: absolute; inset: auto 0 0 0; height: 90px; pointer-events: none;
-  background: linear-gradient(transparent, var(--panel));
+.preview .open {
+  position: absolute; top: 12px; right: 12px; opacity: 0; transition: opacity .15s ease;
+  background: rgba(23,22,27,.86); color: #fff; border-radius: 999px;
+  padding: 5px 12px; font-size: 12px; font-weight: 600; backdrop-filter: blur(6px);
 }
+.preview:hover .open { opacity: 1; }
 
 /* --- bloques copiables --- */
 

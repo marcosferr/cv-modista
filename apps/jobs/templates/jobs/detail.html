@@ -52,6 +52,7 @@
     </div>
     <a class="preview" href="{% url 'job_download' job.pk 'pdf' %}" target="_blank" rel="noopener" title="Abrir el PDF">
       <img src="{% url 'job_download' job.pk 'png' %}" alt="Vista previa del CV generado" loading="lazy">
+      <span class="open">Abrir el PDF ↗</span>
     </a>
     <div class="btns" style="margin-top:18px">
       <a class="btn" href="{% url 'job_download' job.pk 'pdf' %}" download>Descargar PDF</a>
